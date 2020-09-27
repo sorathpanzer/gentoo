@@ -1,0 +1,179 @@
+#!/bin/bash
+
+start=0
+
+sync_portage()
+{
+	source /etc/profile
+	export PS1="(chroot) ${PS1}"
+	emerge-webrsync
+	emerge --sync
+	emerge --verbose --oneshot app-portage/cpuid2cpuflags
+	echo "$(cpuid2cpuflags | sed 's/: /=\"/')\"" >> /etc/portage/make.conf
+	
+  	emerge -UDN @world
+  	emerge --depclean
+  	emerge -UDN @world
+  	emerge vim
+}
+
+set_layman()
+{
+	emerge layman dev-vcs/git
+  	layman -L
+  	layman -a musl mv lto-overlay
+	emerge ltoize
+}
+
+set_ccache()
+{
+	emerge dev-util/ccache
+	mkdir -p /var/cache/ccache
+	chown root:portage /var/cache/ccache
+	chmod 2775 /var/cache/ccache
+
+	echo "# Maximum cache size to maintain
+max_size = 5G
+# Allow others to run 'ebuild' and share the cache.
+umask = 002
+# Preserve cache across GCC rebuilds and
+compiler_check = %compiler% -v
+# I expect 1.5M files. 300 files per directory.
+cache_dir_levels = 3" > /var/cache/ccache/ccache.conf
+
+	sed -i 's/parallel-install/parallel-install ccache/' /etc/portage/make.conf
+	echo 'CCACHE_DIR="/var/cache/ccache"' >> /etc/portage/make.conf
+}
+
+set_libressl()
+{
+	echo "-libressl" >> /etc/portage/profile/use.stable.mask
+	echo "dev-libs/openssl
+#dev-libs/elfutils::gentoo" >> /etc/portage/package.mask
+	echo "dev-libs/libressl" >> /etc/portage/package.accept_keywords
+	
+	emerge -f libressl
+  	emerge -C openssl
+  	emerge -1q libressl
+	sed -i 's/xinerama/xinerama libressl/' /etc/portage/make.conf
+  	emerge -1q openssh wget python iputils
+  	emerge -q @preserved-rebuild
+}
+
+set_clang()
+{
+	emerge --update --deep --changed-use sys-devel/clang
+	sed -i 's/gcc/clang/' /etc/portage/make.conf
+	sed -i 's/g++/clang++/' /etc/portage/make.conf
+	sed -i 's/libressl/libressl lto graphite clang/' /etc/portage/make.conf
+	sed -i '0,/CFLAGS/s//#CFLAGS/' /etc/portage/make.conf
+	sed -i 's/#CFCLANG/COMMON_FLAGS/' /etc/portage/make.conf
+	sed -i 's/#LDFLAGS/LDFLAGS/' /etc/portage/make.conf
+	sed -i 's/#AR/AR/' /etc/portage/make.conf
+	sed -i 's/#NM/NM/' /etc/portage/make.conf
+	sed -i 's/#RANLIB/RANLIB/' /etc/portage/make.conf
+
+	emerge -1vN sys-devel/llvm
+	mkdir /etc/portage/env
+
+	echo 'CC="clang"
+CXX="clang++"
+CFLAGS="${CFLAGS} -fno-lto"
+CXXFLAGS="${CFLAGS} -fno-lto"
+LDFLAGS="${CFLAGS} -fno-lto"
+AR="llvm-ar"
+NM="llvm-nm"
+RANLIB="llvm-ranlib"' > /etc/portage/env/clang-nolto
+
+	echo 'CC="gcc"
+CXX="g++"
+AR="gcc-ar"
+NM="gcc-nm"
+RANLIB="gcc-ranlib"' > /etc/portage/env/gcc-lto
+
+echo 'CC="gcc"
+CXX="g++"
+CFLAGS="-fno-lto -march=skylake -O3 -pipe"
+CXXFLAGS="${CFLAGS}"
+LDFLAGS="${CFLAGS}"
+AR="ar"
+NM="nm"
+RANLIB="ranlib"' > /etc/portage/env/gcc-nolto
+
+
+echo 'CC="gcc"
+CXX="g++"' > /etc/portage/env/gcc
+
+	echo 'dev-libs/elfutils gcc-lto
+sys-devel/m4 gcc-lto
+dev-libs/libgcrypt gcc-lto
+dev-libs/isl gcc-nolto
+dev-lang/python gcc-lto
+dev-lang/rust gcc-lto
+dev-python/cffi gcc-lto
+dev-python/cryptography gcc-lto
+sys-config/ltoize gcc
+sys-devel/gcc gcc-lto' > /etc/portage/package.env
+
+emerge --ask --update --deep --changed-use sys-devel/clang
+}
+
+set_locale()
+{
+	echo "Europe/Lisbon" > /etc/timezone
+  	emerge --config sys-libs/timezone-data
+  	echo "pt_PT.UTF-8 UTF-8" > /etc/locale.gen
+  	locale-gen
+  	eselect locale list
+  	eselect locale set 4
+  	env-update
+}
+
+install_pkgs()
+{
+	emerge gentoo-sources genkernel vim btrfs-progs grub cryptsetup dracut
+	#emerge networkmanager alsa-utils libX11 xorg-server libXrandr libXinerama libXft xrdb xrandr doas \
+  	#xf86-video-vboxvideo virtualbox-guest-additions firefox-bin
+}
+
+install_kern()
+{
+	genkernel --btrfs --luks --lvm  all
+	KERNEL="$(ls /lib/modules)"
+	dracut --hostonly --kver $KERNEL
+}
+
+configure_grub()
+{
+	UUID2=$(blkid /dev/sda2 | awk '{print $2}' | sed s/\"//g)
+	CRYPT=$(blkid /dev/mapper/cryptroot | awk '{print $2}' | sed s/\"//g)
+	echo 'GRUB_CMDLINE_LINUX_DEFAULT="dolvm dobtrfs crypt_root=XXXXX root=KKKKK quiet"' >> /etc/default/grub
+	sed -i "s/XXXXX/$UUID2/g" /etc/default/grub
+	sed -i "s/KKKKK/$CRYPT/g" /etc/default/grub
+	echo "GRUB_ENABLE_CRYPTODISK=y" >> /etc/default/grub
+	grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+	grub-mkconfig -o /boot/grub/grub.cfg
+	rc-update add dmcrypt boot
+	dmsetup mknodes
+}
+
+configure_system()
+{
+	passwd
+	echo "PanzerX" > /etc/hostname
+	echo "permit persist sorath as root" > /etc/doas.conf
+}
+
+sync_portage
+set_layman
+set_ccache
+set_libressl
+#set_clang
+#set_locale
+#install_pkgs
+#install_kern
+#configure_grub
+#configure_system
+
+runtime="$(($SECONDS / 3600))hrs $((($SECONDS / 60) % 60))min $(($SECONDS % 60))sec"
+echo "The system was installed in: $runtime!"
