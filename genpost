@@ -113,7 +113,8 @@ dev-lang/rust gcc-lto
 dev-python/cffi gcc-lto
 dev-python/cryptography gcc-lto
 sys-config/ltoize gcc
-sys-devel/gcc gcc-lto' > /etc/portage/package.env
+sys-devel/gcc gcc-lto
+sys-boot/efibootmgr gcc-lto' > /etc/portage/package.env
 
 emerge --ask --update --deep --changed-use sys-devel/clang
 }
