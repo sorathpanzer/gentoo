@@ -118,6 +118,7 @@ sys-boot/efibootmgr gcc-lto
 sys-boot/grub gcc-lto' > /etc/portage/package.env
 
 emerge --ask --update --deep --changed-use sys-devel/clang
+emerge -e @world
 }
 
 set_locale()
