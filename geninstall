@@ -86,7 +86,7 @@ MAKEOPTS="-j6 -l${NTHREADS}"
 PORTAGE_NICENESS="1"
 FEATURES="parallel-install"
 USE="-kde -qt4 -qt5 -systemd -gnome -gtk -gtk3 -gtk4 -bindist -aqua -cdinstall -cdr -css -dvd -dvdr -a52 -cjk -clamav -coreaudio -ios -ipod \
-     -iee1394 -emacs -xemacs -emboss -3dfx -altivec -smartcard -cups -firmware -elogind -sanitize -introspection -vala -java -static -static-libs alsa x xinerama"
+     -iee1394 -emacs -xemacs -emboss -3dfx -altivec -smartcard -cups -firmware -elogind -sanitize -introspection -vala -java -static -static-libs btrfs llvm alsa x xinerama"
 EMERGE_DEFAULT_OPTS="--quiet-build=y --jobs=${NTHREADS} --load-average=${NTHREADS}"
 # NOTE: This stage was built with the bindist Use flag enabled
 PORTDIR="/var/db/repos/gentoo"
@@ -129,7 +129,11 @@ sys-fs/cryptsetup argon2 gcrypt -libressl -luks1_default -openssl urandom
 sys-fs/lvm2 -thin
 sys-fs/udisks -lvm
 media-libs/harfbuzz icu
-media-libs/gd png" > /mnt/gentoo/etc/portage/package.use
+media-libs/gd png
+# required by Neovim
+dev-lua/lpeg luajit
+dev-lua/luv luajit
+dev-lua/mpack luajit" > /mnt/gentoo/etc/portage/package.use
 
 #echo "# required by firefox-bin (argument)
 # /var/db/repos/gentoo/profiles/feature/musl/package.mask: 
