@@ -119,6 +119,7 @@ sys-boot/grub gcc-lto' > /etc/portage/package.env
 
 emerge --ask --update --deep --changed-use sys-devel/clang
 emerge -e @world
+emerge --depclean
 }
 
 set_locale()
