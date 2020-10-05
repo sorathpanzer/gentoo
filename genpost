@@ -115,7 +115,8 @@ dev-python/cryptography gcc-lto
 sys-config/ltoize gcc
 sys-devel/gcc gcc-lto
 sys-boot/efibootmgr gcc-lto
-sys-boot/grub gcc-lto' > /etc/portage/package.env
+sys-boot/grub gcc-lto
+net-wireless/crda gcc-lto' > /etc/portage/package.env
 
 emerge --ask --update --deep --changed-use sys-devel/clang
 emerge -e @world
