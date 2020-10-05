@@ -135,9 +135,7 @@ set_locale()
 
 install_pkgs()
 {
-	emerge gentoo-sources genkernel vim btrfs-progs grub cryptsetup dracut
-	#emerge networkmanager alsa-utils libX11 xorg-server libXrandr libXinerama libXft xrdb xrandr doas \
-  	#xf86-video-vboxvideo virtualbox-guest-additions firefox-bin
+	emerge gentoo-sources genkernel vim btrfs-progs grub cryptsetup dracut networkmanager alsa-utils libX11 xorg-server libXrandr libXinerama libXft xrdb xrandr doas dwm alacritty
 }
 
 install_kern()
