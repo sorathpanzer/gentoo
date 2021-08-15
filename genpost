@@ -45,27 +45,11 @@ cache_dir_levels = 3" > /var/cache/ccache/ccache.conf
 	echo 'CCACHE_DIR="/var/cache/ccache"' >> /etc/portage/make.conf
 }
 
-set_libressl()
-{
-	echo "-libressl" >> /etc/portage/profile/use.stable.mask
-	echo "dev-libs/openssl
-#dev-libs/elfutils::gentoo" >> /etc/portage/package.mask
-	echo "dev-libs/libressl" >> /etc/portage/package.accept_keywords
-	
-	emerge -f libressl
-  	emerge -C openssl
-  	emerge -1q libressl
-	sed -i 's/xinerama/xinerama libressl/' /etc/portage/make.conf
-  	emerge -1q openssh wget python iputils
-  	emerge -q @preserved-rebuild
-}
-
 set_clang()
 {
 	emerge --update --deep --changed-use sys-devel/clang
 	sed -i 's/gcc/clang/' /etc/portage/make.conf
 	sed -i 's/g++/clang++/' /etc/portage/make.conf
-	sed -i 's/libressl/libressl lto graphite clang/' /etc/portage/make.conf
 	sed -i '0,/CFLAGS/s//#CFLAGS/' /etc/portage/make.conf
 	sed -i 's/#CFCLANG/COMMON_FLAGS/' /etc/portage/make.conf
 	sed -i 's/#LDFLAGS/LDFLAGS/' /etc/portage/make.conf
@@ -103,20 +87,6 @@ RANLIB="ranlib"' > /etc/portage/env/gcc-nolto
 
 echo 'CC="gcc"
 CXX="g++"' > /etc/portage/env/gcc
-
-	echo 'dev-libs/elfutils gcc-lto
-sys-devel/m4 gcc-lto
-dev-libs/libgcrypt gcc-lto
-dev-libs/isl gcc-nolto
-dev-lang/python gcc-lto
-dev-lang/rust gcc-lto
-dev-python/cffi gcc-lto
-dev-python/cryptography gcc-lto
-sys-config/ltoize gcc
-sys-devel/gcc gcc-lto
-sys-boot/efibootmgr gcc-lto
-sys-boot/grub gcc-lto
-net-wireless/crda gcc-lto' > /etc/portage/package.env
 
 emerge --ask --update --deep --changed-use sys-devel/clang
 emerge -e @world
@@ -170,7 +140,6 @@ configure_system()
 sync_portage
 set_layman
 set_ccache
-set_libressl
 #set_clang
 #set_locale
 #install_pkgs
